@@ -21,12 +21,9 @@ define token instr32(32)
     OpSz        = (31, 31)
     Opc         = (25, 30)
     Rt          = (20, 24)
-    FDt         = (20, 24)
-    FSt         = (20, 24)
     Rth         = (21, 24)
     Rtl         = (21, 24)
     Ra          = (15, 19)
-    FSa         = (15, 19)
     Rb          = (10, 14)
     Rd          = (5, 9)
     Rs          = (5, 9)
@@ -51,8 +48,6 @@ define token instr32(32)
     Imm14s      = (0, 13) signed
     Imm15u      = (0, 14)
     Imm15s      = (0, 14) signed
-    Imm12u      = (0, 11)
-    Imm12s      = (0, 11) signed
     Imm20u      = (0, 19)
     Imm20s      = (0, 19) signed
     Imm24s      = (0, 23) signed
@@ -94,9 +89,6 @@ define token instr32(32)
     sh          = (5, 9)
 
     Bxxc		= (19, 19)
-
-    bi          = (12, 12)
-    MxCP        = (0, 3)
 
     LsmwRa = (15, 19)
     LsmwRb = (20, 24)
@@ -1099,6 +1091,31 @@ define register offset=0x114 size=4 [
     fs16 fs17 fs18 fs19 fs20 fs21 fs22 fs23 fs34 fs25 fs26 fs27 fs28 fs29 fs30 fs31
 ];
 
+define token fpu(32)
+    FOpSz       = (31, 31)
+    COP         = (25, 30)
+    FDt         = (20, 24)
+    FSt         = (20, 24)
+    FRt         = (20, 24)
+    FSa         = (15, 19)
+    FRa         = (15, 19)
+
+    Imm12u      = (0, 11)
+    Imm12s      = (0, 11) signed
+
+    bi          = (12, 12)
+
+    FUI2D       = (10, 14)
+    F2OP        = (6, 9)
+    CP0         = (4, 5)
+    MxCP        = (0, 3)
+    FD1         = (0, 3)
+;
+
+attach variables [FRt FRa] [
+    a0 a1 a2 a3 a4 a5 s0 s1 s2 s3 s4 s5 s6 s7 s8 ta t0 t1 t2 t3 t4 t5 t6 t7 t8 t9 p0 p1 fp gp lp sp
+];
+
 attach variables [FDt] [
     fd0 fd1 fd2 fd3 fd4 fd5 fd6 fd7 fd8 fd9 fd10 fd11 fd12 fd13 fd14 fd15
     fd16 fd17 fd18 fd19 fd20 fd21 fd22 fd23 fd34 fd25 fd26 fd27 fd28 fd29 fd30 fd31
@@ -1114,6 +1131,7 @@ attach variables [FSa] [
     fs16 fs17 fs18 fs19 fs20 fs21 fs22 fs23 fs34 fs25 fs26 fs27 fs28 fs29 fs30 fs31
 ];
 
+@define F32     "(FOpSz=0)"
 @define FImm    "(bi=0)"
 @define FPost   "(bi=1)"
 
@@ -1121,24 +1139,28 @@ attach variables [FSa] [
 
 FloatWordOffset: off is Imm12s [ off = Imm12s << 2; ] { export *[const]:4 off; }
 
-AddrFloatWordRaImm12s: [Ra + FloatWordOffset] is Ra & FloatWordOffset { addr:4 = Ra + FloatWordOffset; export addr; }
+AddrFloatWordRaImm12s: [FRa + FloatWordOffset] is FRa & FloatWordOffset { addr:4 = FRa + FloatWordOffset; export addr; }
 
-:fsdi  FDt, AddrFloatWordRaImm12s is $(I32) & Opc=0b011011 & FDt & $(FImm) & AddrFloatWordRaImm12s { *AddrFloatWordRaImm12s = FDt; }
-:fssi  FSt, AddrFloatWordRaImm12s is $(I32) & Opc=0b011001 & FSt & $(FImm) & AddrFloatWordRaImm12s { *AddrFloatWordRaImm12s = FSt; }
-:fldi  FDt, AddrFloatWordRaImm12s is $(I32) & Opc=0b011010 & FDt & $(FImm) & AddrFloatWordRaImm12s { FDt = *AddrFloatWordRaImm12s; }
-:flsi  FSt, AddrFloatWordRaImm12s is $(I32) & Opc=0b011000 & FSt & $(FImm) & AddrFloatWordRaImm12s { FSt = *AddrFloatWordRaImm12s; }
+:fsdi  FDt, AddrFloatWordRaImm12s is $(F32) & COP=0b011011 & FDt & $(FImm) & AddrFloatWordRaImm12s { *AddrFloatWordRaImm12s = FDt; }
+:fssi  FSt, AddrFloatWordRaImm12s is $(F32) & COP=0b011001 & FSt & $(FImm) & AddrFloatWordRaImm12s { *AddrFloatWordRaImm12s = FSt; }
+:fldi  FDt, AddrFloatWordRaImm12s is $(F32) & COP=0b011010 & FDt & $(FImm) & AddrFloatWordRaImm12s { FDt = *AddrFloatWordRaImm12s; }
+:flsi  FSt, AddrFloatWordRaImm12s is $(F32) & COP=0b011000 & FSt & $(FImm) & AddrFloatWordRaImm12s { FSt = *AddrFloatWordRaImm12s; }
 
 ### Load / Store Instruction (immediate, postincr) ###
 
-:fsdi.bi  FDt, [Ra], FloatWordOffset is $(I32) & Opc=0b011011 & FDt & $(FPost) & Ra & FloatWordOffset { *Ra = FDt; Ra = Ra + FloatWordOffset; }
-:fssi.bi  FSt, [Ra], FloatWordOffset is $(I32) & Opc=0b011001 & FSt & $(FPost) & Ra & FloatWordOffset { *Ra = FSt; Ra = Ra + FloatWordOffset; }
-:fldi.bi  FDt, [Ra], FloatWordOffset is $(I32) & Opc=0b011010 & FDt & $(FPost) & Ra & FloatWordOffset { FDt = *Ra; Ra = Ra + FloatWordOffset; }
-:flsi.bi  FSt, [Ra], FloatWordOffset is $(I32) & Opc=0b011000 & FSt & $(FPost) & Ra & FloatWordOffset { FSt = *Ra; Ra = Ra + FloatWordOffset; }
+:fsdi.bi  FDt, [FRa], FloatWordOffset is $(F32) & COP=0b011011 & FDt & $(FPost) & FRa & FloatWordOffset { *FRa = FDt; FRa = FRa + FloatWordOffset; }
+:fssi.bi  FSt, [FRa], FloatWordOffset is $(F32) & COP=0b011001 & FSt & $(FPost) & FRa & FloatWordOffset { *FRa = FSt; FRa = FRa + FloatWordOffset; }
+:fldi.bi  FDt, [FRa], FloatWordOffset is $(F32) & COP=0b011010 & FDt & $(FPost) & FRa & FloatWordOffset { FDt = *FRa; FRa = FRa + FloatWordOffset; }
+:flsi.bi  FSt, [FRa], FloatWordOffset is $(F32) & COP=0b011000 & FSt & $(FPost) & FRa & FloatWordOffset { FSt = *FRa; FRa = FRa + FloatWordOffset; }
 
 ### Move Instruction ###
 
-:fmtsr Rt, FSa is $(I32) & Opc=0b110101 & Rt & FSa & MxCP=0b1001 { FSa = Rt; } 
-:fmfsr Rt, FSa is $(I32) & Opc=0b110101 & Rt & FSa & MxCP=0b0001 { Rt = FSa; }
+:fmtsr FRt, FSa is $(F32) & COP=0b110101 & FRt & FSa & MxCP=0b1001 { FSa = FRt; } 
+:fmfsr FRt, FSa is $(F32) & COP=0b110101 & FRt & FSa & MxCP=0b0001 { FRt = FSa; }
+
+### Conversion ### 
+
+:fui2d FDt, FSa is $(F32) & COP=0b110101 & FDt & FSa & FUI2D=0b01000 & F2OP=0b1111 & FD1=0b1000 { FDt = int2float(FSa); }
 
 @endif
 
