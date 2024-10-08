@@ -17,15 +17,16 @@ define register offset=0x100 size=8
 define register offset=0x100 size=4
 [d0.hi d0.lo d1.hi d1.lo];
 
-
-
 define token instr32(32)
     OpSz        = (31, 31)
     Opc         = (25, 30)
     Rt          = (20, 24)
+    FDt         = (20, 24)
+    FSt         = (20, 24)
     Rth         = (21, 24)
     Rtl         = (21, 24)
     Ra          = (15, 19)
+    FSa         = (15, 19)
     Rb          = (10, 14)
     Rd          = (5, 9)
     Rs          = (5, 9)
@@ -50,6 +51,8 @@ define token instr32(32)
     Imm14s      = (0, 13) signed
     Imm15u      = (0, 14)
     Imm15s      = (0, 14) signed
+    Imm12u      = (0, 11)
+    Imm12s      = (0, 11) signed
     Imm20u      = (0, 19)
     Imm20s      = (0, 19) signed
     Imm24s      = (0, 23) signed
@@ -92,6 +95,9 @@ define token instr32(32)
 
     Bxxc		= (19, 19)
 
+    bi          = (12, 12)
+    MxCP        = (0, 3)
+
     LsmwRa = (15, 19)
     LsmwRb = (20, 24)
     LsmwRb_ = (20, 24)
@@ -132,7 +138,6 @@ attach variables [Dtlow] [
 attach variables [Dthigh] [
     d0.hi d1.hi
 ];
-
 
 @define I32     "(OpSz=0)"
 @define ALU_1   "(Opc=0b100000)"
@@ -251,6 +256,7 @@ AddrWordRaImm15s: [Ra + WordOffset] is Ra & WordOffset { addr:4 = Ra + WordOffse
 :lbi  Rt, AddrByteRaImm15s is $(I32) & Opc=0b000000 & Rt & AddrByteRaImm15s { local tmp:1 = *AddrByteRaImm15s; Rt = zext(tmp); }
 :lbsi Rt, AddrByteRaImm15s is $(I32) & Opc=0b010000 & Rt & AddrByteRaImm15s { local tmp:1 = *AddrByteRaImm15s; Rt = sext(tmp); }
 :swi  Rt, AddrWordRaImm15s is $(I32) & Opc=0b001010 & Rt & AddrWordRaImm15s { *AddrWordRaImm15s = Rt; }
+
 :shi  Rt, AddrHalfRaImm15s is $(I32) & Opc=0b001001 & Rt & AddrHalfRaImm15s { local tmp = Rt; *AddrHalfRaImm15s = tmp:2; }
 :sbi  Rt, AddrByteRaImm15s is $(I32) & Opc=0b001000 & Rt & AddrByteRaImm15s { local tmp = Rt; *AddrByteRaImm15s = tmp:1; }
 
@@ -1077,3 +1083,61 @@ pop25_re: re2 is re2 & re2=3 { pop25_s8(); }
 
 
 @endif
+
+############ Floating-point ############
+
+@if defined(FPU)
+
+define register offset=0x110 size=8 [
+    fd0 fd1 fd2 fd3 fd4 fd5 fd6 fd7 fd8 fd9 fd10 fd11 fd12 fd13 fd14 fd15
+    fd16 fd17 fd18 fd19 fd20 fd21 fd22 fd23 fd34 fd25 fd26 fd27 fd28 fd29 fd30 fd31
+];
+
+define register offset=0x110 size=4 [
+    fs0 fs1 fs2 fs3 fs4 fs5 fs6 fs7 fs8 fs9 fs10 fs11 fs12 fs13 fs14 fs15
+    fs16 fs17 fs18 fs19 fs20 fs21 fs22 fs23 fs34 fs25 fs26 fs27 fs28 fs29 fs30 fs31
+];
+
+attach variables [FDt] [
+    fd0 fd1 fd2 fd3 fd4 fd5 fd6 fd7 fd8 fd9 fd10 fd11 fd12 fd13 fd14 fd15
+    fd16 fd17 fd18 fd19 fd20 fd21 fd22 fd23 fd34 fd25 fd26 fd27 fd28 fd29 fd30 fd31
+];
+
+attach variables [FSt] [
+    fs0 fs1 fs2 fs3 fs4 fs5 fs6 fs7 fs8 fs9 fs10 fs11 fs12 fs13 fs14 fs15
+    fs16 fs17 fs18 fs19 fs20 fs21 fs22 fs23 fs34 fs25 fs26 fs27 fs28 fs29 fs30 fs31
+];
+
+attach variables [FSa] [
+    fs0 fs1 fs2 fs3 fs4 fs5 fs6 fs7 fs8 fs9 fs10 fs11 fs12 fs13 fs14 fs15
+    fs16 fs17 fs18 fs19 fs20 fs21 fs22 fs23 fs34 fs25 fs26 fs27 fs28 fs29 fs30 fs31
+];
+
+@define FImm    "(bi=0)"
+@define FPost   "(bi=1)"
+
+### Load / Store Instruction (immediate) ###
+
+FloatWordOffset: off is Imm12s [ off = Imm12s << 2; ] { export *[const]:4 off; }
+
+AddrFloatWordRaImm12s: [Ra + FloatWordOffset] is Ra & FloatWordOffset { addr:4 = Ra + FloatWordOffset; export addr; }
+
+:fsdi  FDt, AddrFloatWordRaImm12s is $(I32) & Opc=0b011011 & FDt & $(FImm) & AddrFloatWordRaImm12s { *AddrFloatWordRaImm12s = FDt; }
+:fssi  FSt, AddrFloatWordRaImm12s is $(I32) & Opc=0b011001 & FSt & $(FImm) & AddrFloatWordRaImm12s { *AddrFloatWordRaImm12s = FSt; }
+:fldi  FDt, AddrFloatWordRaImm12s is $(I32) & Opc=0b011010 & FDt & $(FImm) & AddrFloatWordRaImm12s { FDt = *AddrFloatWordRaImm12s; }
+:flsi  FSt, AddrFloatWordRaImm12s is $(I32) & Opc=0b011000 & FSt & $(FImm) & AddrFloatWordRaImm12s { FSt = *AddrFloatWordRaImm12s; }
+
+### Load / Store Instruction (immediate, postincr) ###
+
+:fsdi.bi  FDt, [Ra], FloatWordOffset is $(I32) & Opc=0b011011 & FDt & $(FPost) & Ra & FloatWordOffset { *Ra = FDt; Ra = Ra + FloatWordOffset; }
+:fssi.bi  FSt, [Ra], FloatWordOffset is $(I32) & Opc=0b011001 & FSt & $(FPost) & Ra & FloatWordOffset { *Ra = FSt; Ra = Ra + FloatWordOffset; }
+:fldi.bi  FDt, [Ra], FloatWordOffset is $(I32) & Opc=0b011010 & FDt & $(FPost) & Ra & FloatWordOffset { FDt = *Ra; Ra = Ra + FloatWordOffset; }
+:flsi.bi  FSt, [Ra], FloatWordOffset is $(I32) & Opc=0b011000 & FSt & $(FPost) & Ra & FloatWordOffset { FSt = *Ra; Ra = Ra + FloatWordOffset; }
+
+### Move Instruction ###
+
+:fmtsr Rt, FSa is $(I32) & Opc=0b110101 & Rt & FSa & MxCP=0b1001 { FSa = Rt; } 
+:fmfsr Rt, FSa is $(I32) & Opc=0b110101 & Rt & FSa & MxCP=0b0001 { Rt = FSa; }
+
+@endif
+

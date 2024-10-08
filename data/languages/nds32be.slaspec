@@ -3,5 +3,6 @@
 @define PERFORMANCE_V1 "yes"
 @define PERFORMANCE_V2 "yes"
 @define ENDIAN "big"
+@define FPU "yes"
 
 @include "nds32.sinc"
