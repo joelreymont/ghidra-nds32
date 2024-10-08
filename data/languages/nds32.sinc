@@ -1099,6 +1099,8 @@ define token fpu(32)
     FRt         = (20, 24)
     FSa         = (15, 19)
     FRa         = (15, 19)
+    FDa         = (15, 19)
+    FDb         = (10, 14)
 
     Imm12u      = (0, 11)
     Imm12s      = (0, 11) signed
@@ -1106,7 +1108,7 @@ define token fpu(32)
     bi          = (12, 12)
 
     FUI2D       = (10, 14)
-    F2OP        = (6, 9)
+    FOP         = (6, 9)
     CP0         = (4, 5)
     MxCP        = (0, 3)
     FD1         = (0, 3)
@@ -1116,7 +1118,7 @@ attach variables [FRt FRa] [
     a0 a1 a2 a3 a4 a5 s0 s1 s2 s3 s4 s5 s6 s7 s8 ta t0 t1 t2 t3 t4 t5 t6 t7 t8 t9 p0 p1 fp gp lp sp
 ];
 
-attach variables [FDt] [
+attach variables [FDt FDa FDb] [
     fd0 fd1 fd2 fd3 fd4 fd5 fd6 fd7 fd8 fd9 fd10 fd11 fd12 fd13 fd14 fd15
     fd16 fd17 fd18 fd19 fd20 fd21 fd22 fd23 fd34 fd25 fd26 fd27 fd28 fd29 fd30 fd31
 ];
@@ -1160,7 +1162,14 @@ AddrFloatWordRaImm12s: [FRa + FloatWordOffset] is FRa & FloatWordOffset { addr:4
 
 ### Conversion ### 
 
-:fui2d FDt, FSa is $(F32) & COP=0b110101 & FDt & FSa & FUI2D=0b01000 & F2OP=0b1111 & FD1=0b1000 { FDt = int2float(FSa); }
+:fui2d FDt, FSa is $(F32) & COP=0b110101 & FDt & FSa & FUI2D=0b01000 & FOP=0b1111 & FD1=0b1000 { FDt = int2float(FSa); }
+
+### Arithmetic ###
+
+:fmuld FDt, FDa, FDb is $(F32) & COP=0b110101 & FDt & FDa & FDb & FOP=0b1100 & FD1=0b1000 { FDt = FDa * FDb; }
+:faddd FDt, FDa, FDb is $(F32) & COP=0b110101 & FDt & FDa & FDb & FOP=0 & FD1=0b1000 { FDt = FDa + FDb; }
+:fdivd FDt, FDa, FDb is $(F32) & COP=0b110101 & FDt & FDa & FDb & FOP=0b1101 & FD1=0b1000 { FDt = FDa / FDb; }
+:fd2ui.z FSt, FDa is $(F32) & COP=0b110101 & FSt & FDa & FUI2D=0b10100 & FOP=0b1111 & FD1=0b1000 { FSt = float2float(floor(FDa)); }
 
 @endif
 
